@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>Sistema ILD – Playa Paraíso</title>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.10.0/lib/msal-browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f0f0;min-height:100vh;font-size:15px;color:#222}
+:root{--pri:#7b1c2e;--sec:#f5e6e8;--ok:#2e7d32;--warn:#e65100;--purple:#6a1b9a;--blue:#1565c0}
+.screen{display:none;min-height:100vh}.screen.active{display:block}
+.vcenter{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.hdr{background:var(--pri);padding:13px 18px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:50}
+.hdr h1{color:#fff;font-size:16px;font-weight:700;flex:1;line-height:1.2}
+.hdr .sub{color:#f5c6c6;font-size:11px}
+.back-btn{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:0 4px}
+.hdr-btn{background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 11px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;white-space:nowrap}
+.body{padding:14px 18px;max-width:580px;margin:0 auto}
+.card{background:#fff;border-radius:16px;padding:24px;box-shadow:0 2px 16px rgba(0,0,0,.09);width:100%;max-width:380px}
+.panel{background:#fff;border-radius:12px;padding:15px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.panel h2{font-size:14px;font-weight:700;color:var(--pri);margin-bottom:10px}
+select,input[type=text],input[type=password],textarea{width:100%;padding:10px 12px;border-radius:8px;border:1.5px solid #ddd;font-size:14px;background:#fff;font-family:inherit;color:#222;outline:none}
+textarea{resize:vertical;min-height:64px}
+.btn{display:block;width:100%;padding:13px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;text-align:center}
+.btn:active{opacity:.82}.btn:disabled{background:#ccc!important;cursor:not-allowed}
+.btn-pri{background:var(--pri);color:#fff}.btn-ok{background:var(--ok);color:#fff}
+.btn-ghost{background:#fff;color:var(--pri);border:2px solid var(--pri)}
+.btn-obs{background:var(--purple);color:#fff}.btn-excel{background:#fff;color:var(--blue);border:2px solid var(--blue)}
+.stats{display:flex;gap:8px;margin-bottom:12px}
+.stat{flex:1;text-align:center;background:#f5f5f5;border-radius:8px;padding:10px 4px}
+.stat .n{font-size:20px;font-weight:700}.stat .l{font-size:11px;color:#777;margin-top:1px}
+.nav-btn{width:100%;padding:15px;background:#fff;color:var(--pri);border:2px solid var(--sec);border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;text-align:left;display:flex;align-items:center;gap:10px;position:relative;box-shadow:0 1px 4px rgba(0,0,0,.06);font-family:inherit}
+.nav-badge{position:absolute;top:10px;right:14px;background:var(--warn);color:#fff;border-radius:10px;padding:2px 8px;font-size:12px;font-weight:700}
+.crow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f0f0f0;cursor:pointer;user-select:none}
+.crow:last-child{border-bottom:none}
+.cbox{width:22px;height:22px;border-radius:6px;border:2px solid #ccc;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.cbox.on{background:var(--ok);border-color:var(--ok);color:#fff;font-size:13px}
+.ctext{font-size:14px;color:#333}.ctext.done{color:#aaa;text-decoration:line-through}
+.pbar{height:6px;background:#eee;border-radius:4px;margin-bottom:12px;overflow:hidden}
+.pbar-fill{height:100%;border-radius:4px;transition:width .3s}
+.foto-grid{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+.fthumb{position:relative;width:74px;height:74px}
+.fthumb img{width:74px;height:74px;object-fit:cover;border-radius:7px;border:2px solid #ddd;display:block;cursor:zoom-in}
+.fthumb .fdel{position:absolute;top:-5px;right:-5px;width:20px;height:20px;border-radius:50%;background:#c62828;color:#fff;border:none;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center}
+.fthumb .fnum{position:absolute;bottom:2px;left:2px;background:rgba(0,0,0,.5);color:#fff;font-size:9px;padding:1px 4px;border-radius:3px}
+.ild-card{background:#fff;border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.07);cursor:pointer;border-left:4px solid var(--warn)}
+.ild-card.ok{border-left-color:var(--ok)}.ild-card.obs{border-left-color:var(--purple)}
+.ild-card h3{font-size:15px;font-weight:700;margin-bottom:2px}
+.ild-card .meta{font-size:12px;color:#777;margin-bottom:5px}
+.ild-card .chips{font-size:12px;color:#aaa;display:flex;gap:10px;flex-wrap:wrap}
+.badge{display:inline-block;font-size:11px;padding:3px 10px;border-radius:12px;font-weight:700;white-space:nowrap}
+.b-pend{background:#fff3e0;color:var(--warn)}.b-ok{background:#e8f5e9;color:var(--ok)}.b-obs{background:#f3e5f5;color:var(--purple)}
+.b-pend-l,.b-ok-l,.b-obs-l{color:#fff;background:rgba(255,255,255,.22)}
+.filtros{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.fbtn{padding:5px 12px;border-radius:20px;border:2px solid #ddd;background:#fff;color:#666;font-size:12px;cursor:pointer;font-family:inherit}
+.fbtn.on{border-color:var(--pri);background:var(--sec);color:var(--pri);font-weight:700}
+.period-row{background:#fff;border-radius:10px;padding:9px 13px;margin-bottom:10px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.drow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f5f5f5;font-size:14px}
+.drow:last-child{border-bottom:none}.drow .dk{color:#777}.drow .dv{font-weight:700;text-align:right;max-width:60%}
+.kpi-grid{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.kpi{flex:1;min-width:76px;background:#fff;border-radius:10px;padding:11px 6px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.kpi .kn{font-size:20px;font-weight:700}.kpi .kl{font-size:11px;color:#777;margin-top:2px}
+.dash-wrap{overflow-x:auto}
+.dash-tbl{width:100%;border-collapse:collapse;font-size:12px;min-width:520px}
+.dash-tbl th{padding:8px 10px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.4px;white-space:nowrap}
+.dash-tbl td{padding:8px 10px;text-align:center;border-bottom:1px solid #f0f0f0}
+.chip{display:inline-block;padding:3px 10px;border-radius:6px;font-weight:700;font-size:13px;min-width:30px;border:1px solid #ddd;text-align:center}
+.circle{width:42px;height:42px;border-radius:50%;border:3px solid;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin:auto}
+.sync-bar{background:#fff;border-radius:8px;padding:8px 13px;margin-bottom:10px;font-size:12px;display:flex;align-items:center;gap:8px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.sync-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center}
+#toast.show{opacity:1}
+#foto-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:999;align-items:center;justify-content:center}
+#foto-modal.open{display:flex}
+#foto-modal img{max-width:95vw;max-height:90vh;object-fit:contain;border-radius:8px}
+#foto-close{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer;font-family:inherit}
+#loading{display:none;position:fixed;inset:0;background:rgba(255,255,255,.93);z-index:800;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+#loading.show{display:flex}
+#loading .spin{width:36px;height:36px;border:4px solid #eee;border-top-color:var(--pri);border-radius:50%;animation:spin .7s linear infinite}
+#loading p{color:var(--pri);font-size:14px;font-weight:700}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="loading"><div class="spin"></div><p id="loading-msg">Conectando con Microsoft 365...</p></div>
+<div id="foto-modal"><button id="foto-close" onclick="closeFoto()">✕</button><img id="foto-img" src="" alt="foto"/></div>
+<div id="toast"></div>
+
+<!-- LOGIN -->
+<div id="s-login" class="screen active">
+<div class="vcenter"><div class="card">
+  <div style="text-align:center;margin-bottom:20px">
+    <div style="font-size:46px;line-height:1">🏨</div>
+    <div style="font-size:21px;font-weight:700;color:var(--pri);margin-top:6px">Sistema ILD</div>
+    <div style="color:#aaa;font-size:12px;margin-bottom:14px">Playa Paraíso · All Inclusive</div>
+    <div id="conn-banner" style="border-radius:8px;padding:9px 12px;font-size:12px;display:flex;align-items:center;gap:8px;border:1px solid #ffe082;background:#fff3e0;margin-bottom:4px">
+      <div class="sync-dot" id="conn-dot" style="background:var(--warn)"></div>
+      <div style="text-align:left;flex:1">
+        <div id="conn-title" style="font-weight:700;color:var(--warn)">Conectando...</div>
+        <div id="conn-sub" style="color:#888;margin-top:1px;font-size:11px">Microsoft 365 · Hotelera Paraíso S.A.</div>
+      </div>
+    </div>
+  </div>
+  <div id="lt-tipo" style="display:none;flex-direction:column;gap:11px">
+    <button class="btn btn-pri" onclick="showPinForm()">🔐 Ingresar con PIN<div style="font-size:12px;font-weight:400;opacity:.8;margin-top:2px">Jefatura · Aprobadores · Gerencia</div></button>
+    <button class="btn btn-ghost" onclick="showLibreForm()">👷 Ingresar como Colaborador<div style="font-size:12px;color:#999;font-weight:400;margin-top:2px">Sin PIN requerido</div></button>
+  </div>
+  <div id="lt-pin" style="display:none">
+    <select id="lp-sel" style="margin-bottom:10px"><option value="">— Selecciona tu usuario —</option></select>
+    <input type="password" id="lp-pin" placeholder="PIN" style="letter-spacing:8px;text-align:center;margin-bottom:10px" onkeydown="if(event.key==='Enter')doLoginPin()"/>
+    <div id="lp-err" style="color:#c62828;font-size:12px;text-align:center;margin-bottom:8px;display:none"></div>
+    <button class="btn btn-pri" onclick="doLoginPin()">Entrar</button>
+    <button onclick="backToTipo()" style="width:100%;margin-top:8px;padding:8px;background:none;border:none;color:#888;cursor:pointer;font-size:13px;font-family:inherit">← Volver</button>
+  </div>
+  <div id="lt-libre" style="display:none">
+    <select id="ll-sel" style="margin-bottom:10px"><option value="">— Tu nombre —</option></select>
+    <div id="ll-err" style="color:#c62828;font-size:12px;margin-bottom:8px;display:none"></div>
+    <button class="btn btn-pri" onclick="doLoginLibre()">Entrar</button>
+    <button onclick="backToTipo()" style="width:100%;margin-top:8px;padding:8px;background:none;border:none;color:#888;cursor:pointer;font-size:13px;font-family:inherit">← Volver</button>
+  </div>
+  <div style="text-align:center;margin-top:14px;font-size:10px;color:#ccc">Datos en SharePoint · ILDSistemasPlayaParaso</div>
+</div></div>
+</div>
+
+<!-- HOME -->
+<div id="s-home" class="screen">
+  <div class="hdr"><div style="flex:1"><h1>🏨 Sistema ILD <span id="h-sync" style="font-size:13px;opacity:.7">☁️</span></h1><div class="sub" id="h-info"></div></div><button class="hdr-btn" onclick="doSalir()">Salir</button></div>
+  <div class="body">
+    <div class="panel"><h2>📊 Resumen</h2>
+      <div class="stats">
+        <div class="stat"><div class="n" id="st-t" style="color:var(--blue)">0</div><div class="l">Total</div></div>
+        <div class="stat"><div class="n" id="st-p" style="color:var(--warn)">0</div><div class="l">Pendiente</div></div>
+        <div class="stat"><div class="n" id="st-a" style="color:var(--ok)">0</div><div class="l">Aprobado</div></div>
+        <div class="stat"><div class="n" id="st-o" style="color:var(--purple)">0</div><div class="l">Obs.</div></div>
+      </div>
+    </div>
+    <div id="home-nav"></div>
+  </div>
+</div>
+
+<!-- FORM -->
+<div id="s-form" class="screen">
+  <div class="hdr"><button class="back-btn" onclick="goHome()">←</button><div style="flex:1"><h1>📋 Nuevo ILD</h1></div><span id="f-sync" style="font-size:11px;background:rgba(255,255,255,.2);color:#fff;padding:3px 8px;border-radius:12px;font-weight:700"></span></div>
+  <div class="body">
+    <div class="panel"><h2>📍 Área</h2>
+      <select id="f-area" onchange="onArea()"><option value="">— ¿Qué ILD vas a llenar? —</option></select>
+      <div id="f-apro" style="margin-top:7px;font-size:12px;color:#888;display:none">Aprobador: <b id="f-apro-n"></b></div>
+    </div>
+    <div id="f-cl" class="panel" style="display:none"><h2 id="f-cl-h">✅ Checklist</h2><div class="pbar"><div class="pbar-fill" id="f-pb" style="width:0%;background:var(--pri)"></div></div><div id="f-items"></div></div>
+    <div id="f-fp" class="panel" style="display:none"><h2 id="f-fh">📷 Fotos</h2>
+      <input type="file" id="f-file" accept="image/*" multiple style="display:none" onchange="onFiles(event)"/>
+      <button class="btn btn-ghost" style="margin-bottom:8px" id="f-fbtn" onclick="document.getElementById('f-file').click()">📸 Subir fotos</button>
+      <div class="foto-grid" id="f-fg"></div>
+    </div>
+    <div id="f-op" class="panel" style="display:none"><h2>📝 Observaciones</h2><textarea id="f-obs" placeholder="Novedad (opcional)..."></textarea></div>
+    <button class="btn btn-pri" id="f-send" style="display:none;margin-bottom:24px" onclick="enviar()">📤 Enviar ILD</button>
+  </div>
+</div>
+
+<!-- ENVIADO -->
+<div id="s-enviado" class="screen"><div class="vcenter"><div class="card" style="text-align:center">
+  <div style="font-size:52px;margin-bottom:10px">✅</div>
+  <div style="font-size:19px;font-weight:700;color:var(--ok);margin-bottom:5px">ILD Enviado</div>
+  <div style="color:#666;font-size:13px;margin-bottom:3px">Guardado en SharePoint</div>
+  <div style="font-size:12px;color:#aaa;margin-bottom:20px">Visible desde todas las tablets</div>
+  <button class="btn btn-pri" style="margin-bottom:10px" onclick="nuevoILD()">📋 Nuevo ILD</button>
+  <button class="btn btn-ghost" onclick="doSalir()">🏠 Salir</button>
+</div></div></div>
+
+<!-- PANEL -->
+<div id="s-panel" class="screen">
+  <div class="hdr"><button class="back-btn" onclick="goHome()">←</button><h1 id="panel-h" style="flex:1">👔 ILDs</h1><button class="hdr-btn" style="margin-right:5px" onclick="refresh(true)">🔄</button><button class="hdr-btn" onclick="exportPanel()">⬇️ Excel</button></div>
+  <div class="body">
+    <div class="sync-bar"><div class="sync-dot" id="p-dot" style="background:var(--ok)"></div><span id="p-info" style="color:#555;flex:1">SharePoint · ILDSistemasPlayaParaso</span><button onclick="refresh(true)" style="background:none;border:none;color:var(--blue);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Actualizar</button></div>
+    <div class="period-row"><span style="font-size:12px;color:#666;white-space:nowrap">📅</span>
+      <button class="fbtn" data-d="7" onclick="setPer(this)">7d</button>
+      <button class="fbtn" data-d="30" onclick="setPer(this)">30d</button>
+      <button class="fbtn on" data-d="90" onclick="setPer(this)">90d</button>
+      <button class="fbtn" data-d="365" onclick="setPer(this)">1 año</button>
+      <button class="fbtn" data-d="9999" onclick="setPer(this)">Todo</button>
+    </div>
+    <div class="filtros" id="panel-flt">
+      <button class="fbtn on" onclick="setFlt(this,'todos')">Todos</button>
+      <button class="fbtn" onclick="setFlt(this,'Pendiente')">🟡 Pendientes</button>
+      <button class="fbtn" onclick="setFlt(this,'Aprobado')">✅ Aprobados</button>
+      <button class="fbtn" onclick="setFlt(this,'Con observaciones')">📝 Obs.</button>
+    </div>
+    <div id="panel-count" style="font-size:12px;color:#aaa;margin-bottom:10px"></div>
+    <div id="panel-list"></div><div style="height:20px"></div>
+  </div>
+</div>
+
+<!-- DETALLE -->
+<div id="s-det" class="screen">
+  <div class="hdr"><button class="back-btn" onclick="backPanel()">←</button><h1 id="det-h" style="flex:1">ILD</h1><span id="det-badge"></span></div>
+  <div class="body" id="det-body"></div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="s-dash" class="screen">
+  <div class="hdr"><button class="back-btn" onclick="goHome()">←</button><h1 id="dash-h" style="flex:1">📊 Dashboard</h1><button class="hdr-btn" onclick="exportAll()">⬇️ Excel</button></div>
+  <div style="padding:10px 16px;background:#fff;border-bottom:1px solid #e0e0e0;display:flex;gap:10px;flex-wrap:wrap">
+    <select id="d-area" onchange="renderDash()" style="flex:1;min-width:140px;width:auto"></select>
+    <select id="d-mes" onchange="renderDash()" style="flex:1;min-width:130px;width:auto">
+      <option value="todos">Todos los meses</option>
+      <option value="0">Enero</option><option value="1">Febrero</option><option value="2">Marzo</option>
+      <option value="3">Abril</option><option value="4">Mayo</option><option value="5">Junio</option>
+      <option value="6">Julio</option><option value="7">Agosto</option><option value="8">Septiembre</option>
+      <option value="9">Octubre</option><option value="10">Noviembre</option><option value="11">Diciembre</option>
+    </select>
+  </div>
+  <div class="body" id="dash-body"></div>
+</div>
+
+<script>
+'use strict';
+
+// ══ CONFIGURACIÓN FIJA — Hotelera Paraíso S.A. ══════════════════════════
+const CLIENT_ID  = '1a67d6b5-c2e8-4592-8dd0-b3e444d84687';
+const TENANT_ID  = '36db945a-4d81-4bf8-ae41-c98438dc888c';
+
+// URI de redirección FIJA — exactamente como está registrada en Azure
+const REDIRECT_URI = 'https://playaparaiso-my.sharepoint.com/:u:/g/personal/estrategia_playaparaiso_com_ec/IQDihrX5PTY0QK1lbZs4-sNXAYRDU3yswpU4e-Mta25oWDs';
+
+const SP = {
+  driveId: 'b!UqQC5rixFUS1O6rAFKcjZb6CXL5yLDlDpsjkFeUzUeU1u4YzIkF7T4Eg9f8EMMgT',
+  folder:  'ILD Sistema',
+  json:    'ILD_Registros.json',
+};
+const GRAPH  = 'https://graph.microsoft.com/v1.0';
+const SCOPES = ['https://graph.microsoft.com/Files.ReadWrite.All','https://graph.microsoft.com/User.Read'];
+
+// ══ DATOS ════════════════════════════════════════════════════════════════
+const AC={
+  'Recepción Apertura':{r:12,g:'Recepción',t:'Apertura'},'Recepción Cierre':{r:7,g:'Recepción',t:'Cierre'},
+  'Áreas Públicas':{r:8,g:'Housekeeping',t:'Diurno'},'Habitaciones':{r:10,g:'Housekeeping',t:'Diurno'},
+  'Servicio A la Carta':{r:6,g:'Servicio',t:'Diurno'},'Servicio Buffet':{r:6,g:'Servicio',t:'Apertura'},
+  'Servicio Buffet Plaza':{r:6,g:'Servicio',t:'Apertura'},'Cierre Plaza Paraíso':{r:6,g:'Servicio',t:'Cierre'},
+  'Apertura Cocina':{r:8,g:'Cocina',t:'Apertura'},'Cocina Central':{r:8,g:'Cocina',t:'Cierre'},
+  'Cocina Almeja Playera':{r:6,g:'Cocina',t:'Diurno'},'Servicio Almeja Playera':{r:8,g:'Servicio',t:'Diurno'},
+  'Sunset Bar':{r:6,g:'Servicio',t:'Apertura'},'Sunset Deck':{r:6,g:'Servicio',t:'Apertura'},
+  'Chiringuito Apertura':{r:6,g:'Cocina',t:'Apertura'},'Cierre Chiringuito':{r:6,g:'Cocina',t:'Cierre'},
+  'Apertura Spa':{r:4,g:'Spa',t:'Apertura'},'Cierre Spa':{r:4,g:'Spa',t:'Cierre'},
+  'Mantenimiento':{r:6,g:'Mantenimiento',t:'Apertura'},
+  'Compras / Bodega Apertura':{r:4,g:'Compras',t:'Apertura'},'Compras / Bodega Cierre':{r:4,g:'Compras',t:'Cierre'},
+};
+const APR={
+  'Recepción Apertura':'Coordinador Comercial','Recepción Cierre':'Coordinador Comercial',
+  'Áreas Públicas':'Ama de Llaves','Habitaciones':'Ama de Llaves',
+  'Servicio A la Carta':'Jefe de Operaciones','Servicio Buffet':'Jefe de Operaciones',
+  'Servicio Buffet Plaza':'Jefe de Operaciones','Cierre Plaza Paraíso':'Jefe de Operaciones',
+  'Apertura Cocina':'Jefe de Operaciones','Cocina Central':'Jefe de Operaciones',
+  'Cocina Almeja Playera':'Jefe de Operaciones','Servicio Almeja Playera':'Jefe de Operaciones',
+  'Sunset Bar':'Jefe de Operaciones','Sunset Deck':'Jefe de Operaciones',
+  'Chiringuito Apertura':'Jefe de Operaciones','Cierre Chiringuito':'Jefe de Operaciones',
+  'Apertura Spa':'Jefe de Operaciones','Cierre Spa':'Jefe de Operaciones',
+  'Mantenimiento':'Jefe de Mantenimiento',
+  'Compras / Bodega Apertura':'Coordinador de Compras','Compras / Bodega Cierre':'Coordinador de Compras',
+};
+const CL={
+  'Recepción Apertura':['Oficina ordenada y lista','Counter limpio sin objetos personales','Computadora encendida y operativa','Sistema de reservas abierto','Caja chica verificada','Comunicaciones revisadas','Documentos del día listos','Área de espera limpia','Baños de recepción limpios','Señalética en buen estado','Registro de novedades revisado','Llaves de habitaciones en orden'],
+  'Recepción Cierre':['Oficina despejada','Counter sin objetos personales','Caja cuadrada y entregada','Reporte de cierre enviado','Novedades registradas','Sistema guardado','Parte interna del counter limpia'],
+  'Áreas Públicas':['Lobby central limpio','Restaurante Plaza Paraíso limpio','Área Piscina en orden','Camas playa limpias','Chiringuito - Baños limpios','Sunset Bar - Baños limpios','Sunset Deck revisada','Áreas Comunes en orden'],
+  'Habitaciones':['Baño – Ducha limpio','Inodoro limpio','Lavamanos limpio','Amenities completos','Toallas en buen estado','Cama tendida correctamente','Habitación limpia y ordenada','TV y AC funcionando','Minibar revisado','Número de habitación registrado'],
+  'Servicio A la Carta':['Mesas montadas correctamente','Mise en place lista','Cristalería limpia','Mantelería en buen estado','Stock de bebidas verificado','Área limpia y ordenada'],
+  'Servicio Buffet':['Estaciones de buffet limpias','Equipos de calor operativos','Mise en place lista','Utensilios completos','Stock verificado','Área limpia'],
+  'Servicio Buffet Plaza':['Estaciones limpias','Equipos operativos','Mise en place lista','Utensilios completos','Stock verificado','Área ordenada'],
+  'Cierre Plaza Paraíso':['Área limpia y desinfectada','Equipos apagados','Stock contado','Mesas recogidas','Caja cuadrada','Novedades registradas'],
+  'Apertura Cocina':['Área de Steward Back limpia','Mesón de apoyo limpio','Cámaras de frío en temperatura','Área de producción limpia','Equipos operativos','Mise en place lista','Ventilación funcionando','Stock revisado'],
+  'Cocina Central':['Cocina limpia y desinfectada','Cámaras de frío cerradas','Basura retirada','Pisos y paredes limpios','Equipos apagados','Área en orden','Registro de temperaturas','Novedades reportadas'],
+  'Cocina Almeja Playera':['Mesa fría cerrada','Área de cocina limpia','Equipos operativos','Mise en place lista','Stock verificado','Área ordenada'],
+  'Servicio Almeja Playera':['Área de bar limpia','Mesas y sillas limpias','Mise en place lista','Stock verificado','Equipos operativos','Área limpia','Iluminación funcionando','Música preparada'],
+  'Sunset Bar':['Bar limpio y ordenado','Stock verificado','Equipos operativos','Mise en place lista','Iluminación funcionando','Área limpia'],
+  'Sunset Deck':['Deck limpio','Mobiliario en orden','Fogata lista/apagada','Iluminación funcionando','Área limpia','Novedades registradas'],
+  'Chiringuito Apertura':['Cocina de 4 hornillas limpia','Área de bar limpia','Equipos operativos','Mise en place lista','Stock verificado','Área ordenada'],
+  'Cierre Chiringuito':['Cocina limpia y desinfectada','Equipos apagados','Stock contado','Área limpia','Caja realizada','Novedades registradas'],
+  'Apertura Spa':['Área limpia y ordenada','Equipos operativos','Productos disponibles','Registro de clientes listo'],
+  'Cierre Spa':['Área limpia','Equipos apagados','Inventario contado','Novedades registradas'],
+  'Mantenimiento':['Lectura consumo energía','Lectura consumo agua','Equipos mecánicos revisados','Piscina en parámetros','Generadores operativos','Novedades registradas'],
+  'Compras / Bodega Apertura':['Bodega Suministros 1er corredor','Bodega Suministros 2do corredor','Área recepción de mercadería limpia','Stock de entrada verificado'],
+  'Compras / Bodega Cierre':['Bodega ordenada y cerrada','Registro entradas/salidas completo','Área limpia','Inventario actualizado'],
+};
+const USERS=[
+  {id:'dev',nombre:'Desarrollador',pin:'9999',rol:'desarrollador',areas:[]},
+  {id:'g1',nombre:'Gerencia General',pin:'0000',rol:'gerencia',areas:[]},
+  {id:'a1',nombre:'Jefe de Operaciones',pin:'1001',rol:'aprobador',areas:['Servicio A la Carta','Servicio Buffet','Servicio Buffet Plaza','Cierre Plaza Paraíso','Apertura Cocina','Cocina Central','Cocina Almeja Playera','Servicio Almeja Playera','Sunset Bar','Sunset Deck','Chiringuito Apertura','Cierre Chiringuito','Apertura Spa','Cierre Spa']},
+  {id:'a2',nombre:'Coordinador Comercial',pin:'1002',rol:'aprobador',areas:['Recepción Apertura','Recepción Cierre']},
+  {id:'a3',nombre:'Jefe de Mantenimiento',pin:'1003',rol:'aprobador',areas:['Mantenimiento']},
+  {id:'a4',nombre:'Ama de Llaves',pin:'1004',rol:'aprobador',areas:['Áreas Públicas','Habitaciones']},
+  {id:'a5',nombre:'Coordinador de Compras',pin:'1005',rol:'aprobador',areas:['Compras / Bodega Apertura','Compras / Bodega Cierre']},
+  {id:'c1',nombre:'Recepcion',pin:'',rol:'colaborador',areas:['Recepción Apertura','Recepción Cierre']},
+  {id:'c2',nombre:'Ángel Benites',pin:'',rol:'colaborador',areas:['Recepción Apertura','Recepción Cierre']},
+  {id:'c3',nombre:'Daniela',pin:'',rol:'colaborador',areas:['Recepción Apertura','Recepción Cierre']},
+  {id:'c4',nombre:'Lady',pin:'',rol:'colaborador',areas:['Recepción Apertura','Recepción Cierre']},
+  {id:'c5',nombre:'Jonathan Mazzini',pin:'',rol:'colaborador',areas:['Recepción Apertura','Recepción Cierre']},
+  {id:'c6',nombre:'Daniel Guevara',pin:'',rol:'colaborador',areas:['Áreas Públicas']},
+  {id:'c7',nombre:'Dary Hidalgo',pin:'',rol:'colaborador',areas:['Áreas Públicas']},
+  {id:'c8',nombre:'Jocelyn',pin:'',rol:'colaborador',areas:['Habitaciones']},
+  {id:'c9',nombre:'Justin',pin:'',rol:'colaborador',areas:['Habitaciones']},
+  {id:'c10',nombre:'Shirley Fuentes',pin:'',rol:'colaborador',areas:['Apertura Cocina','Cocina Central','Chiringuito Apertura','Cierre Chiringuito','Servicio A la Carta','Servicio Buffet','Servicio Buffet Plaza','Sunset Bar','Sunset Deck']},
+  {id:'c11',nombre:'Fernando Urrutia',pin:'',rol:'colaborador',areas:['Apertura Cocina','Cocina Central','Chiringuito Apertura','Cierre Chiringuito','Servicio A la Carta','Servicio Buffet','Servicio Buffet Plaza','Sunset Bar','Sunset Deck']},
+  {id:'c12',nombre:'Andrés Mite',pin:'',rol:'colaborador',areas:['Cocina Almeja Playera']},
+  {id:'c13',nombre:'Adriana',pin:'',rol:'colaborador',areas:['Servicio Almeja Playera']},
+  {id:'c14',nombre:'Manuel C.',pin:'',rol:'colaborador',areas:['Mantenimiento']},
+  {id:'c15',nombre:'Xavier L.',pin:'',rol:'colaborador',areas:['Mantenimiento']},
+  {id:'c16',nombre:'Josue Aquino',pin:'',rol:'colaborador',areas:['Compras / Bodega Apertura','Compras / Bodega Cierre']},
+  {id:'c17',nombre:'Departamento Compras',pin:'',rol:'colaborador',areas:['Compras / Bodega Apertura','Compras / Bodega Cierre']},
+  {id:'c18',nombre:'Eventual',pin:'',rol:'colaborador',areas:['Áreas Públicas','Servicio A la Carta','Sunset Bar','Sunset Deck','Chiringuito Apertura','Apertura Spa','Cierre Spa']},
+];
+
+// ══ ESTADO ═══════════════════════════════════════════════════════════════
+let msalApp=null,msToken=null,userUpn='';
+let usuario=null,registros=[],jsonItemId=null;
+let fArea='',fChecks={},fFotos=[];
+let pFiltro='todos',pPeriodo=90,syncTimer=null;
+
+// ══ UTILS ════════════════════════════════════════════════════════════════
+const fmt=d=>new Date(d).toLocaleString('es-EC',{dateStyle:'short',timeStyle:'short'});
+const fmtD=d=>new Date(d).toLocaleDateString('es-EC');
+const diffMin=(a,b)=>Math.abs(new Date(b)-new Date(a))/60000;
+let _id=Date.now()%100000; const gid=()=>++_id;
+const $=id=>document.getElementById(id);
+const isGD=()=>usuario&&['gerencia','desarrollador'].includes(usuario.rol);
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');window.scrollTo(0,0);}
+function loading(show,msg='Procesando...'){$('loading').classList.toggle('show',show);$('loading-msg').textContent=msg;}
+function toast(msg,ms=2500){const t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),ms);}
+function openFoto(src){$('foto-img').src=src;$('foto-modal').classList.add('open');}
+function closeFoto(){$('foto-modal').classList.remove('open');}
+function setBanner(ok,title,sub){
+  const b=$('conn-banner');
+  b.style.background=ok?'#e8f5e9':'#fff3e0';b.style.borderColor=ok?'#a5d6a7':'#ffe082';
+  $('conn-dot').style.background=ok?'var(--ok)':'var(--warn)';
+  $('conn-title').textContent=title;$('conn-title').style.color=ok?'var(--ok)':'var(--warn)';
+  $('conn-sub').textContent=sub;
+}
+
+// ══ MSAL ═════════════════════════════════════════════════════════════════
+async function initAuth(){
+  msalApp=new msal.PublicClientApplication({
+    auth:{clientId:CLIENT_ID,authority:`https://login.microsoftonline.com/${TENANT_ID}`,redirectUri:REDIRECT_URI},
+    cache:{cacheLocation:'localStorage',storeAuthStateInCookie:true},
+  });
+  await msalApp.initialize();
+  const rr=await msalApp.handleRedirectPromise();
+  if(rr){msToken=rr.accessToken;userUpn=rr.account?.username||'';}
+  if(!msToken){
+    const accs=msalApp.getAllAccounts();
+    if(accs.length){
+      try{const r=await msalApp.acquireTokenSilent({scopes:SCOPES,account:accs[0]});msToken=r.accessToken;userUpn=accs[0].username||'';}
+      catch(e){console.warn('silent fail',e);}
+    }
+  }
+  if(msToken){
+    setBanner(true,'✅ Conectado · Hotelera Paraíso S.A.',userUpn);
+    await refresh(false);
+  }else{
+    setBanner(false,'Inicia sesión con Microsoft','@playaparaiso.com.ec');
+    try{
+      const r=await msalApp.loginPopup({scopes:SCOPES,redirectUri:REDIRECT_URI});
+      msToken=r.accessToken;userUpn=r.account?.username||'';
+      setBanner(true,'✅ Conectado · Hotelera Paraíso S.A.',userUpn);
+      await refresh(false);
+    }catch(e){
+      console.warn('popup fail, trying redirect',e);
+      await msalApp.loginRedirect({scopes:SCOPES,redirectUri:REDIRECT_URI});
+      return;
+    }
+  }
+  $('lt-tipo').style.display='flex';
+  poblarSelects();
+}
+
+async function getToken(){
+  const accs=msalApp.getAllAccounts();
+  if(!accs.length)throw new Error('Sin cuenta');
+  const r=await msalApp.acquireTokenSilent({scopes:SCOPES,account:accs[0]});
+  msToken=r.accessToken;return msToken;
+}
+
+async function graph(path,method='GET',body=null,blob=false){
+  if(!msToken)await getToken();
+  const h={Authorization:`Bearer ${msToken}`};
+  if(body instanceof ArrayBuffer)h['Content-Type']='application/octet-stream';
+  else if(body)h['Content-Type']='application/json';
+  const res=await fetch(GRAPH+path,{method,headers:h,body:body?(body instanceof ArrayBuffer?body:JSON.stringify(body)):null});
+  if(res.status===401){msToken=null;await getToken();return graph(path,method,body,blob);}
+  if(res.status===204)return null;
+  if(!res.ok){const e=await res.text();throw new Error(`${method} ${path}: ${res.status} — ${e}`);}
+  return blob?res.arrayBuffer():res.json();
+}
+
+// ══ SHAREPOINT ════════════════════════════════════════════════════════════
+async function ensureFolder(){
+  try{const f=await graph(`/drives/${SP.driveId}/root:/${SP.folder}`);return f.id;}
+  catch{const f=await graph(`/drives/${SP.driveId}/root/children`,'POST',{name:SP.folder,folder:{},'@microsoft.graph.conflictBehavior':'rename'});return f.id;}
+}
+async function spLeer(){
+  try{
+    const fid=await ensureFolder();
+    const ch=await graph(`/drives/${SP.driveId}/items/${fid}/children?$filter=name eq '${SP.json}'&$select=id,name`);
+    if(!ch.value||!ch.value.length){jsonItemId=null;return [];}
+    jsonItemId=ch.value[0].id;
+    const buf=await graph(`/drives/${SP.driveId}/items/${jsonItemId}/content`,'GET',null,true);
+    const data=JSON.parse(new TextDecoder().decode(buf));
+    return Array.isArray(data)?data:[];
+  }catch(e){console.warn('spLeer',e);return [];}
+}
+async function spGuardar(regs){
+  const payload=regs.map(r=>({...r,fotos:(r.fotos||[]).map(f=>({nombre:f.nombre||'',spUrl:f.spUrl||'',data:(f.data&&f.data.length<200000)?f.data:''}))}));
+  const buf=new TextEncoder().encode(JSON.stringify(payload)).buffer;
+  if(jsonItemId){await graph(`/drives/${SP.driveId}/items/${jsonItemId}/content`,'PUT',buf);}
+  else{const fid=await ensureFolder();const f=await graph(`/drives/${SP.driveId}/items/${fid}:/${SP.json}:/content`,'PUT',buf);jsonItemId=f.id;}
+}
+async function spSubirFoto(dataUrl,nombre,ildId){
+  try{
+    const fid=await ensureFolder();
+    let pfid;
+    try{const pf=await graph(`/drives/${SP.driveId}/items/${fid}:/Fotos/ILD_${ildId}`);pfid=pf.id;}
+    catch{
+      let fotosId;
+      try{const ff=await graph(`/drives/${SP.driveId}/items/${fid}:/Fotos`);fotosId=ff.id;}
+      catch{const ff=await graph(`/drives/${SP.driveId}/items/${fid}/children`,'POST',{name:'Fotos',folder:{}});fotosId=ff.id;}
+      const pf=await graph(`/drives/${SP.driveId}/items/${fotosId}/children`,'POST',{name:`ILD_${ildId}`,folder:{},'@microsoft.graph.conflictBehavior':'rename'});pfid=pf.id;
+    }
+    const blob=await fetch(dataUrl).then(r=>r.blob());
+    const up=await graph(`/drives/${SP.driveId}/items/${pfid}:/${nombre}:/content`,'PUT',await blob.arrayBuffer());
+    let spUrl='';
+    try{const lk=await graph(`/drives/${SP.driveId}/items/${up.id}/createLink`,'POST',{type:'view',scope:'organization'});spUrl=lk.link.webUrl;}catch{}
+    return{nombre,spUrl,data:dataUrl.length<200000?dataUrl:''};
+  }catch(e){console.warn('foto',e);return{nombre,spUrl:'',data:dataUrl};}
+}
+async function comprimirImg(dataUrl,maxPx=900,q=0.78){
+  return new Promise(res=>{
+    const img=new Image();img.onload=()=>{
+      let w=img.width,h=img.height;
+      if(w>maxPx||h>maxPx){const s=Math.min(maxPx/w,maxPx/h);w=Math.round(w*s);h=Math.round(h*s);}
+      const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);res(c.toDataURL('image/jpeg',q));
+    };img.onerror=()=>res(dataUrl);img.src=dataUrl;
+  });
+}
+
+// ══ SYNC ══════════════════════════════════════════════════════════════════
+async function refresh(showT=false){
+  try{
+    $('h-sync').textContent='🔄';
+    const regs=await spLeer();
+    const m={};registros.forEach(r=>{m[r.id]=r;});regs.forEach(r=>{m[r.id]=r;});
+    registros=Object.values(m).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+    updateStats();$('h-sync').textContent='☁️';$('p-dot').style.background='var(--ok)';
+    $('p-info').textContent=`${registros.length} registros · ${fmtD(new Date())}`;
+    if(showT)toast('✅ Datos actualizados');
+  }catch(e){$('h-sync').textContent='⚠️';$('p-dot').style.background='var(--warn)';console.warn(e);if(showT)toast('⚠️ Error');}
+}
+function schedSave(regs){
+  if(syncTimer)clearTimeout(syncTimer);$('h-sync').textContent='💾';
+  syncTimer=setTimeout(async()=>{try{await spGuardar(regs);$('h-sync').textContent='☁️';}catch(e){$('h-sync').textContent='⚠️';}},2000);
+}
+
+// ══ LOGIN ILD ═════════════════════════════════════════════════════════════
+function poblarSelects(){
+  const sp=$('lp-sel'),sl=$('ll-sel');
+  USERS.filter(u=>u.pin).forEach(u=>{const o=document.createElement('option');o.value=u.nombre;o.textContent=u.nombre;sp.appendChild(o);});
+  USERS.filter(u=>u.rol==='colaborador').sort((a,b)=>a.nombre.localeCompare(b.nombre)).forEach(u=>{const o=document.createElement('option');o.value=u.nombre;o.textContent=u.nombre;sl.appendChild(o);});
+}
+function showPinForm(){$('lt-tipo').style.display='none';$('lt-pin').style.display='block';}
+function showLibreForm(){$('lt-tipo').style.display='none';$('lt-libre').style.display='block';}
+function backToTipo(){$('lt-tipo').style.display='flex';$('lt-pin').style.display='none';$('lt-libre').style.display='none';}
+function doLoginPin(){const n=$('lp-sel').value,p=$('lp-pin').value;const u=USERS.find(x=>x.nombre===n&&x.pin===p);if(!u){$('lp-err').textContent='PIN incorrecto';$('lp-err').style.display='block';return;}usuario=u;goHome();}
+function doLoginLibre(){const n=$('ll-sel').value;if(!n){$('ll-err').textContent='Selecciona tu nombre';$('ll-err').style.display='block';return;}usuario=USERS.find(x=>x.nombre===n);if(!usuario)return;showScreen('s-form');initForm();}
+function doSalir(){usuario=null;fArea='';fChecks={};fFotos=[];backToTipo();showScreen('s-login');}
+
+// ══ HOME ══════════════════════════════════════════════════════════════════
+function goHome(){if(!usuario){showScreen('s-login');return;}showScreen('s-home');
+  const rl={gerencia:'Gerencia',desarrollador:'Desarrollador',aprobador:'Aprobador',colaborador:'Colaborador'};
+  $('h-info').textContent=`${usuario.nombre} · ${rl[usuario.rol]||usuario.rol}`;updateStats();
+  const nav=$('home-nav');nav.innerHTML='';
+  const addBtn=(icon,label,fn,badge)=>{const b=document.createElement('button');b.className='nav-btn';b.innerHTML=`<span style="font-size:20px">${icon}</span>${label}`+(badge?`<span class="nav-badge">${badge}</span>`:'');b.onclick=fn;nav.appendChild(b);};
+  const pend=registros.filter(r=>r.estado==='Pendiente'&&(isGD()||usuario.areas?.includes(r.area))).length;
+  if(isGD()||usuario.rol==='aprobador')addBtn('📊',isGD()?'Dashboard General':'Mi Dashboard',()=>{initDash();showScreen('s-dash');});
+  addBtn('👔',isGD()?'Ver todos los ILDs':'ILDs para aprobar',()=>{showScreen('s-panel');renderPanel();},pend||undefined);
+  if(isGD())addBtn('⚙️','Administración',showAdmin);
+}
+function updateStats(){
+  const mis=registros.filter(r=>isGD()||usuario?.areas?.includes(r.area));
+  $('st-t').textContent=mis.length;$('st-p').textContent=mis.filter(r=>r.estado==='Pendiente').length;
+  $('st-a').textContent=mis.filter(r=>r.estado==='Aprobado').length;$('st-o').textContent=mis.filter(r=>r.estado==='Con observaciones').length;
+}
+
+// ══ FORM ══════════════════════════════════════════════════════════════════
+function initForm(){
+  fArea='';fChecks={};fFotos=[];
+  const s=$('f-area');s.innerHTML='<option value="">— ¿Qué ILD vas a llenar? —</option>';
+  (usuario?.areas||[]).forEach(a=>{const o=document.createElement('option');o.value=a;o.textContent=a;s.appendChild(o);});
+  ['f-cl','f-fp','f-op'].forEach(id=>$(id).style.display='none');$('f-send').style.display='none';$('f-apro').style.display='none';
+  $('f-fg').innerHTML='';$('f-obs').value='';$('f-sync').textContent=msToken?'☁️ SharePoint':'📴 Sin conexión';
+}
+function onArea(){fArea=$('f-area').value;fChecks={};fFotos=[];if(!fArea){['f-cl','f-fp','f-op'].forEach(id=>$(id).style.display='none');$('f-send').style.display='none';$('f-apro').style.display='none';return;}$('f-apro-n').textContent=APR[fArea]||'—';$('f-apro').style.display='block';renderCL();renderFP();$('f-op').style.display='block';$('f-send').style.display='block';}
+function renderCL(){
+  const items=CL[fArea]||[];const done=Object.values(fChecks).filter(Boolean).length;const pct=items.length?Math.round(done/items.length*100):0;
+  $('f-cl-h').textContent=`✅ Checklist — ${done}/${items.length}`;$('f-pb').style.width=pct+'%';$('f-pb').style.background=pct===100?'var(--ok)':'var(--pri)';
+  const c=$('f-items');c.innerHTML='';
+  items.forEach((item,i)=>{const d=document.createElement('div');d.className='crow';d.onclick=()=>{fChecks[i]=!fChecks[i];renderCL();};const bx=document.createElement('div');bx.className='cbox'+(fChecks[i]?' on':'');if(fChecks[i])bx.textContent='✓';const tx=document.createElement('span');tx.className='ctext'+(fChecks[i]?' done':'');tx.textContent=item;d.appendChild(bx);d.appendChild(tx);c.appendChild(d);});
+  $('f-cl').style.display='block';
+}
+function renderFP(){
+  const req=AC[fArea]?.r||0,n=fFotos.length;$('f-fh').textContent=`📷 Fotos — ${n}/${req}`;$('f-fbtn').textContent=n>=req?'📸 Completo ✓':`📸 Subir (${req-n} restantes)`;
+  const g=$('f-fg');g.innerHTML='';
+  fFotos.forEach((src,i)=>{const w=document.createElement('div');w.className='fthumb';const img=document.createElement('img');img.src=src;img.onclick=()=>openFoto(src);const del=document.createElement('button');del.className='fdel';del.textContent='✕';del.onclick=e=>{e.stopPropagation();fFotos.splice(i,1);renderFP();};const num=document.createElement('span');num.className='fnum';num.textContent=i+1;w.appendChild(img);w.appendChild(del);w.appendChild(num);g.appendChild(w);});
+  $('f-fp').style.display='block';
+}
+function onFiles(e){
+  const req=AC[fArea]?.r||0;
+  Promise.all(Array.from(e.target.files).map(f=>new Promise(res=>{const r=new FileReader();r.onload=ev=>res(ev.target.result);r.readAsDataURL(f);}))).then(srcs=>{fFotos=[...fFotos,...srcs].slice(0,req);renderFP();});e.target.value='';
+}
+async function enviar(){
+  const items=CL[fArea]||[];const done=Object.values(fChecks).filter(Boolean).length;const req=AC[fArea]?.r||0;
+  if(done<items.length&&!confirm(`${items.length-done} ítems sin marcar. ¿Enviar igual?`))return;
+  if(fFotos.length<req&&!confirm(`Solo ${fFotos.length}/${req} fotos. ¿Continuar?`))return;
+  loading(true,'Comprimiendo fotos...');const id=gid();const fotosData=[];
+  for(let i=0;i<fFotos.length;i++){loading(true,`Subiendo foto ${i+1}/${fFotos.length}...`);const c=await comprimirImg(fFotos[i]);fotosData.push(await spSubirFoto(c,`ILD${id}_foto${i+1}.jpg`,id));}
+  loading(true,'Guardando en SharePoint...');
+  const nuevo={id,area:fArea,usuario:usuario.nombre,fecha:new Date().toISOString(),checks:{...fChecks},fotos:fotosData,obs:$('f-obs').value,estado:'Pendiente',notaJef:'',aprobador:'',fechaAprobacion:'',totalItems:items.length,completados:done,aprobadorEsperado:APR[fArea]||'—'};
+  registros=[nuevo,...registros];schedSave(registros);loading(false);showScreen('s-enviado');
+}
+function nuevoILD(){showScreen('s-form');initForm();}
+
+// ══ PANEL ═════════════════════════════════════════════════════════════════
+function setPer(btn){document.querySelectorAll('.period-row .fbtn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');pPeriodo=parseInt(btn.dataset.d);renderPanel();}
+function setFlt(btn,f){document.querySelectorAll('#panel-flt .fbtn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');pFiltro=f;renderPanel();}
+function panelData(){const lim=new Date();lim.setDate(lim.getDate()-pPeriodo);let base=registros.filter(r=>new Date(r.fecha)>=lim);if(!isGD()&&usuario.rol==='aprobador')base=base.filter(r=>usuario.areas.includes(r.area));if(pFiltro!=='todos')base=base.filter(r=>r.estado===pFiltro);return base;}
+function renderPanel(){
+  $('panel-h').textContent=isGD()?'👔 Todos los ILDs':'👔 ILDs para aprobar';
+  const base=panelData();$('panel-count').textContent=`${base.length} resultado${base.length!==1?'s':''}`;
+  const l=$('panel-list');l.innerHTML='';
+  if(!base.length){l.innerHTML='<div style="text-align:center;padding:40px 0;color:#bbb"><div style="font-size:36px;margin-bottom:8px">📭</div>No hay ILDs en este período</div>';return;}
+  base.forEach(r=>{const d=document.createElement('div');d.className='ild-card'+(r.estado==='Aprobado'?' ok':r.estado==='Con observaciones'?' obs':'');d.onclick=()=>showDet(r);d.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px"><div><h3>${r.area}</h3><div class="meta">${r.usuario} · ${fmt(r.fecha)}</div></div><span class="badge ${r.estado==='Aprobado'?'b-ok':r.estado==='Con observaciones'?'b-obs':'b-pend'}">${r.estado==='Aprobado'?'✅ Aprobado':r.estado==='Con observaciones'?'📝 Obs.':'🟡 Pendiente'}</span></div><div class="chips"><span>📷 ${(r.fotos||[]).length}</span><span>✓ ${r.completados}/${r.totalItems}</span>${r.aprobador?`<span>👤 ${r.aprobador}</span>`:''}</div>`;l.appendChild(d);});
+}
+function backPanel(){showScreen('s-panel');renderPanel();}
+function exportPanel(){_exportRows(panelData(),'ILD_Panel');}
+
+// ══ DETALLE ═══════════════════════════════════════════════════════════════
+function showDet(r){
+  $('det-h').textContent=`ILD #${r.id}`;$('det-badge').className=`badge ${r.estado==='Aprobado'?'b-ok-l':r.estado==='Con observaciones'?'b-obs-l':'b-pend-l'}`;$('det-badge').textContent=r.estado==='Aprobado'?'✅ Aprobado':r.estado==='Con observaciones'?'📝 Obs.':'🟡 Pendiente';
+  const items=CL[r.area]||[];const puedeAprobar=isGD()||(usuario.rol==='aprobador'&&usuario.areas.includes(r.area));
+  let h=`<div class="panel"><h2>📋 Datos</h2>${[['Área',r.area],['Responsable',r.usuario],['Fecha',fmt(r.fecha)],['Aprobador esperado',r.aprobadorEsperado||'—'],['Ítems',`${r.completados}/${r.totalItems}`]].map(([k,v])=>`<div class="drow"><span class="dk">${k}</span><span class="dv">${v}</span></div>`).join('')}</div>
+  <div class="panel"><h2>✅ Checklist (${r.completados}/${items.length})</h2>${items.map((item,i)=>`<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid #f5f5f5;font-size:13px;align-items:center"><span style="color:${r.checks[i]?'var(--ok)':'#ddd'};font-size:15px">${r.checks[i]?'✓':'○'}</span><span style="color:${r.checks[i]?'#333':'#aaa'}">${item}</span></div>`).join('')}</div>`;
+  if((r.fotos||[]).length){h+=`<div class="panel"><h2>📷 Fotos (${r.fotos.length})</h2><div class="foto-grid">`;r.fotos.forEach((f,i)=>{const src=f.data||f.spUrl||'';h+=src?`<div class="fthumb"><img src="${src}" onclick="openFoto(this.src)"/><span class="fnum">${i+1}</span></div>`:`<div class="fthumb" style="background:#f5f5f5;border-radius:7px;border:2px solid #ddd;display:flex;align-items:center;justify-content:center"><span style="font-size:20px">🖼️</span></div>`;});h+=`</div></div>`;}
+  if(r.obs)h+=`<div style="background:#fff8e1;border-radius:12px;padding:14px;margin-bottom:12px;border:1px solid #ffe082;font-size:14px"><div style="font-weight:700;color:#f57c00;font-size:13px;margin-bottom:4px">📝 Nota del colaborador</div>${r.obs}</div>`;
+  if(r.notaJef)h+=`<div style="background:#f3e5f5;border-radius:12px;padding:14px;margin-bottom:12px;border:1px solid #ce93d8;font-size:14px"><div style="font-weight:700;color:var(--purple);font-size:13px;margin-bottom:4px">💬 ${r.aprobador} · ${fmt(r.fechaAprobacion)}</div>${r.notaJef}</div>`;
+  if(puedeAprobar&&r.estado==='Pendiente')h+=`<div class="panel"><h2>👔 Acción de aprobación</h2><textarea id="njef" placeholder="Observación (opcional)..." style="margin-bottom:10px"></textarea><div style="display:flex;gap:10px"><button class="btn btn-ok" onclick="aprobar(${r.id},true)">✅ Aprobar</button><button class="btn btn-obs" onclick="aprobar(${r.id},false)">📝 Con obs.</button></div></div>`;
+  if(isGD()&&r.estado!=='Pendiente')h+=`<div class="panel"><h2>💬 Nota adicional</h2><textarea id="njef" placeholder="Nota de gerencia...">${r.notaJef||''}</textarea><button class="btn btn-pri" style="margin-top:8px" onclick="guardarNota(${r.id})">💾 Guardar nota</button></div>`;
+  h+=`<button class="btn btn-excel" style="margin-bottom:20px" onclick="_exportRows(registros.filter(x=>x.id===${r.id}),'ILD_${r.id}')">⬇️ Exportar a Excel</button>`;
+  $('det-body').innerHTML=h;showScreen('s-det');
+}
+async function aprobar(id,ok){const nota=($('njef')||{value:''}).value;const ahora=new Date().toISOString();registros=registros.map(r=>r.id===id?{...r,estado:ok?'Aprobado':'Con observaciones',notaJef:nota,aprobador:usuario.nombre,fechaAprobacion:ahora}:r);schedSave(registros);toast(ok?'✅ ILD aprobado':'📝 Con observaciones');backPanel();}
+async function guardarNota(id){const nota=($('njef')||{value:''}).value;registros=registros.map(r=>r.id===id?{...r,notaJef:nota}:r);schedSave(registros);toast('💾 Nota guardada');backPanel();}
+
+// ══ DASHBOARD ══════════════════════════════════════════════════════════════
+function initDash(){
+  $('dash-h').textContent=isGD()?'📊 Dashboard General':'📊 Mi Dashboard';
+  const sel=$('d-area');sel.innerHTML='<option value="todas">Todos los grupos</option>';
+  const grupos=isGD()?[...new Set(Object.values(AC).map(v=>v.g))]:[...new Set((usuario.areas||[]).map(a=>AC[a]?.g).filter(Boolean))];
+  grupos.forEach(g=>{const o=document.createElement('option');o.value=g;o.textContent=g;sel.appendChild(o);});
+  $('d-mes').value=String(new Date().getMonth());renderDash();
+}
+function renderDash(){
+  const area=$('d-area').value,mes=$('d-mes').value;
+  const gPerm=isGD()?null:[...new Set((usuario.areas||[]).map(a=>AC[a]?.g).filter(Boolean))];
+  const base=registros.filter(r=>{if(gPerm&&!gPerm.includes(AC[r.area]?.g))return false;if(area!=='todas'&&AC[r.area]?.g!==area)return false;if(mes!=='todos'&&String(new Date(r.fecha).getMonth())!==mes)return false;return true;});
+  const apr=base.filter(r=>r.estado==='Aprobado').length,obs=base.filter(r=>r.estado==='Con observaciones').length,pend=base.filter(r=>r.estado==='Pendiente').length,cum=base.length?Math.round(((apr+obs)/base.length)*100):0;
+  let h=`<div class="kpi-grid">${[['Total',base.length,'var(--blue)'],['Aprobados',apr,'var(--ok)'],['Con obs.',obs,'var(--purple)'],['Pendientes',pend,'var(--warn)'],['% Cumplimiento',base.length?cum+'%':'—','var(--pri)']].map(([l,v,c])=>`<div class="kpi" style="border-top:3px solid ${c}"><div class="kn" style="color:${c}">${v}</div><div class="kl">${l}</div></div>`).join('')}</div>`;
+  const rows={};base.forEach(r=>{if(!rows[r.area])rows[r.area]={a:r.area,t:AC[r.area]?.t||'',g:AC[r.area]?.g||'',sub:0,apr:0,obs:0,tms:[]};rows[r.area].sub++;if(r.estado==='Aprobado')rows[r.area].apr++;if(r.estado==='Con observaciones')rows[r.area].obs++;if(r.fechaAprobacion&&r.fecha)rows[r.area].tms.push(diffMin(r.fecha,r.fechaAprobacion));});
+  const grps={};Object.values(rows).forEach(row=>{if(!grps[row.g])grps[row.g]=[];grps[row.g].push(row);});
+  if(!Object.keys(grps).length)h+=`<div style="text-align:center;padding:40px;color:#bbb;background:#fff;border-radius:12px"><div style="font-size:36px;margin-bottom:8px">📭</div>No hay datos</div>`;
+  else Object.entries(grps).forEach(([grupo,filas])=>{h+=`<div style="background:#fff;border-radius:12px;margin-bottom:16px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.08)"><div style="background:var(--pri);color:#fff;padding:10px 16px;font-weight:700;font-size:13px;text-transform:uppercase">📁 ${grupo}</div><div class="dash-wrap"><table class="dash-tbl"><thead><tr><th style="text-align:left;background:#eee;color:#333;padding-left:14px">Turno</th><th style="background:var(--pri);color:#fff">DÍAS</th><th style="background:#c62828;color:#fff">SUBIDOS</th><th style="background:#c62828;color:#fff">APROBADOS</th><th style="background:#c62828;color:#fff">OBS.</th><th style="background:#c62828;color:#fff">TOTAL APR.</th><th style="background:#b71c1c;color:#fff">CUMPLIM.</th><th style="background:#7f0000;color:#fff">TIEMPO(h)</th></tr></thead><tbody>`;filas.forEach((f,i)=>{const dm=mes!=='todos'?new Date(new Date().getFullYear(),parseInt(mes)+1,0).getDate():'—';const cum=f.sub>0?Math.min(100,mes!=='todos'?Math.round((f.sub/dm)*100):100):0;const cc=cum>=80?'var(--ok)':cum>=50?'var(--warn)':'#c62828';const tm=f.tms.length?(f.tms.reduce((a,b)=>a+b,0)/f.tms.length/60).toFixed(2):'0.00';h+=`<tr style="background:${i%2===0?'#fafafa':'#fff'}"><td style="padding:9px 14px;font-weight:600;color:#444;text-align:left">${f.t}</td><td><span class="chip">${dm}</span></td><td><span class="chip">${f.sub}</span></td><td><span class="chip" style="color:var(--ok);border-color:var(--ok)">${f.apr}</span></td><td><span class="chip" style="color:${f.obs>0?'var(--purple)':'#bbb'};border-color:${f.obs>0?'var(--purple)':'#eee'}">${f.obs>0?f.obs:'- -'}</span></td><td><span class="chip">${f.apr+f.obs}</span></td><td><div class="circle" style="border-color:${cc};color:${cc}">${f.sub>0?cum+'%':'—'}</div></td><td style="font-weight:700;color:#555">${tm}</td></tr>`;});h+=`</tbody></table></div></div>`;});
+  if(base.length){h+=`<div class="panel"><h2>📈 Estado por área</h2>`;Object.keys(AC).filter(a=>(isGD()||(usuario.areas||[]).includes(a))&&base.some(r=>r.area===a)).forEach(a=>{const bs=base.filter(r=>r.area===a),tot=bs.length;if(!tot)return;const ap=bs.filter(r=>r.estado==='Aprobado').length,ob=bs.filter(r=>r.estado==='Con observaciones').length,pe=bs.filter(r=>r.estado==='Pendiente').length;h+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;color:#555;margin-bottom:3px"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:6px">${a}</span><span style="color:var(--ok);margin-right:6px">${ap} apr</span><span style="color:var(--warn);margin-right:6px">${pe} pend</span><span style="color:#888">${tot} total</span></div><div style="display:flex;height:10px;border-radius:5px;overflow:hidden;background:#f0f0f0"><div style="width:${(ap/tot)*100}%;background:var(--ok)"></div><div style="width:${(ob/tot)*100}%;background:var(--purple)"></div><div style="width:${(pe/tot)*100}%;background:var(--warn)"></div></div></div>`;});h+=`<div style="display:flex;gap:14px;margin-top:10px;font-size:11px;color:#666;flex-wrap:wrap">${[['var(--ok)','Aprobado'],['var(--purple)','Con observación'],['var(--warn)','Pendiente']].map(([c,l])=>`<span style="display:flex;align-items:center;gap:4px"><span style="width:11px;height:11px;border-radius:3px;background:${c};display:inline-block"></span>${l}</span>`).join('')}</div></div>`;}
+  h+=`<div style="height:20px"></div>`;$('dash-body').innerHTML=h;
+}
+function exportAll(){_exportRows(registros,'ILD_Historial_Completo');}
+
+// ══ ADMIN ══════════════════════════════════════════════════════════════════
+function showAdmin(){
+  const ov=document.createElement('div');ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:flex-end;justify-content:center';
+  const sh=document.createElement('div');sh.style.cssText='background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;padding:20px;box-sizing:border-box';
+  sh.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div style="font-weight:700;font-size:16px;color:var(--pri)">⚙️ Administración</div><button onclick="this.closest('.ov-w').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#888;font-family:inherit">✕</button></div>
+  <div style="background:#e8f5e9;border-radius:10px;padding:14px;margin-bottom:14px"><div style="font-weight:700;font-size:14px;margin-bottom:6px">☁️ SharePoint conectado</div><div style="font-size:12px;color:#555;line-height:1.8">Sitio: <b>ILDSistemasPlayaParaso</b><br>Carpeta: <b>ILD Sistema/</b><br>Registros: <b>${registros.length}</b><br>Usuario: <b>${userUpn||'—'}</b></div></div>
+  <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px"><button class="btn btn-ok" onclick="refresh(true)">🔄 Sincronizar ahora</button><button class="btn btn-excel" onclick="exportAll()">📊 Exportar historial a Excel</button></div>
+  <div style="font-weight:700;font-size:14px;color:var(--pri);margin-bottom:10px">🔑 PINs de acceso</div>
+  ${USERS.filter(u=>u.pin).map(u=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f0f0f0"><div><div style="font-weight:700;font-size:14px">${u.nombre}</div><div style="font-size:12px;color:#888">${u.rol}</div></div><div style="font-family:monospace;background:#f5f5f5;padding:4px 14px;border-radius:8px;font-size:14px;letter-spacing:3px">${u.pin}</div></div>`).join('')}`;
+  ov.className='ov-w';ov.onclick=e=>{if(e.target===ov)ov.remove();};ov.appendChild(sh);document.body.appendChild(ov);
+}
+
+// ══ EXCEL ══════════════════════════════════════════════════════════════════
+function _exportRows(lista,nombre='ILD'){
+  const rows=(lista||[]).filter(Boolean).map(r=>({ID:r.id,Fecha:fmtD(r.fecha),Responsable:r.usuario,Área:r.area,Estado:r.estado,'Observación':r.obs||'','Nota Jefatura':r.notaJef||'',Aprobador:r.aprobador||'','Fecha Aprobación':r.fechaAprobacion?fmtD(r.fechaAprobacion):'','Aprobador Esperado':r.aprobadorEsperado||'','Total Ítems':r.totalItems,Completados:r.completados,Fotos:(r.fotos||[]).length}));
+  const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'ILDs');XLSX.writeFile(wb,`${nombre}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// ══ ARRANQUE ══════════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded',()=>{
+  showScreen('s-login');
+  loading(true,'Conectando con Microsoft 365...');
+  initAuth().finally(()=>loading(false));
+});
+</script>
+</body>
+</html>
